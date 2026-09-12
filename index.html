@@ -537,7 +537,7 @@ if(form){
   document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeLb(); });
   getDocs(query(collection(db,"events"), where("published","==",true))).then(function(snap){
     var today=new Date().toISOString().slice(0,10);
-    var list=snap.docs.map(function(d){return d.data();}).filter(function(e){return (e.date||"")>=today;}).sort(function(a,b){return (a.date||"").localeCompare(b.date||"");});
+    var list=snap.docs.map(function(d){return d.data();}).filter(function(e){return (e.status||"Upcoming")==="Upcoming" && (e.date||"")>=today;}).sort(function(a,b){return (a.date||"").localeCompare(b.date||"");});
     if(!list.length){ host.innerHTML="<p class='lead'>No upcoming events right now &mdash; please check back soon, or come and worship with us any Sunday.</p>"; return; }
     host.innerHTML=list.map(function(e){
       var isImg = /\.(jpe?g|png|gif|webp|bmp|svg)(\?|$)/i.test(e.flyerUrl||"");
