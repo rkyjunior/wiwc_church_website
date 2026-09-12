@@ -250,7 +250,7 @@ footer a:hover{color:#fbeccb}
     </div>
   </div>
   <div class="facts"><div class="wrap facts-in">
-    <span>&#9788; Sunday Worship <b>Time to be confirmed</b></span><span class="dot">&bull;</span>
+    <span>&#9788; Sunday Worship <b id="factSun">Time to be confirmed</b></span><span class="dot">&bull;</span>
     <span>&#9906; Tafo-Pankrono, Kumasi &mdash; opposite Melcom</span><span class="dot">&bull;</span>
     <span>Ghana Post GPS <b>AS-U265-2194</b></span>
   </div></div>
@@ -347,9 +347,9 @@ footer a:hover{color:#fbeccb}
   <div class="section"><div class="wrap">
     <p class="lead">Our full schedule and contact numbers are on the church flyer. Once it&#39;s shared, the exact times below will be filled in. <span class="pending">Times awaiting flyer</span></p>
     <div class="sched">
-      <div class="slot"><div class="day">Sunday</div><div class="what">Worship Service</div><div class="time">Time to be confirmed</div></div>
-      <div class="slot"><div class="day">Midweek</div><div class="what">Bible Study</div><div class="time">Day &amp; time to be confirmed</div></div>
-      <div class="slot"><div class="day">Prayer</div><div class="what">Prayer Meeting</div><div class="time">Day &amp; time to be confirmed</div></div>
+      <div class="slot"><div class="day">Sunday</div><div class="what">Worship Service</div><div class="time" id="schSun">Time to be confirmed</div></div>
+      <div class="slot"><div class="day">Midweek</div><div class="what">Bible Study</div><div class="time" id="schMid">Day &amp; time to be confirmed</div></div>
+      <div class="slot"><div class="day">Prayer</div><div class="what">Prayer Meeting</div><div class="time" id="schPrayer">Day &amp; time to be confirmed</div></div>
     </div>
     <p style="color:var(--ink-soft);margin-top:22px">The Lord&#39;s Supper is shared on the first Sunday of each month.</p>
   </div></div>
@@ -382,8 +382,8 @@ footer a:hover{color:#fbeccb}
       <dl class="info">
         <dt>Address</dt><dd>TAPASS Block A, Tafo-Pankrono, Kumasi<br>Adjacent Tafo-Pankrono Melcom<br>Pankrono &middot; Suame &middot; Ashanti Region</dd>
         <dt>Ghana Post GPS</dt><dd>AS-U265-2194 &nbsp;<a href="https://ghanapostgps.com/map?gps=ASU2652194" target="_blank" rel="noopener">Open in Ghana Post GPS &rarr;</a></dd>
-        <dt>Phone</dt><dd>Phone number to be confirmed <span class="pending">From flyer</span></dd>
-        <dt>Email</dt><dd>Email to be confirmed <span class="pending">From flyer</span></dd>
+        <dt>Phone</dt><dd id="ctPhone">Phone number to be confirmed <span class="pending">From flyer</span></dd>
+        <dt>Email</dt><dd id="ctEmail">Email to be confirmed <span class="pending">From flyer</span></dd>
       </dl>
       <div class="map"><iframe title="Map to The Word Impact Worship Centre" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=6.74324074,-1.61151009&z=17&output=embed"></iframe></div>
     </div>
@@ -492,7 +492,7 @@ function handleVisit(e){e.preventDefault();var n=document.getElementById('formno
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, where, getDoc, doc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 const firebaseConfig = {
   apiKey: "AIzaSyDTLRoX8ll9nUVfHnD35YYg_HoaNu_zOoI",
   authDomain: "wiwc-church.firebaseapp.com",
@@ -548,6 +548,21 @@ if(form){
       return "<article class='ev-card'>"+flyer+"<div class='ev-body'><h3>"+esc(e.title||"Event")+"</h3><p class='ev-meta'>"+meta+"</p>"+desc+"</div></article>";
     }).join("");
   }).catch(function(){ host.innerHTML="<p class='lead'>We couldn&#39;t load events right now. Please try again later.</p>"; });
+})();
+
+// ---- church details from Settings (service times & contact) ----
+(function(){
+  var esc=function(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});};
+  getDoc(doc(db,"settings","org")).then(function(snap){
+    if(!snap.exists()) return; var d=snap.data()||{};
+    function setTxt(id,val){ var el=document.getElementById(id); if(el && val && String(val).trim()) el.textContent=String(val).trim(); }
+    setTxt("factSun", d.sundayTime);
+    setTxt("schSun", d.sundayTime);
+    setTxt("schMid", d.midweek);
+    setTxt("schPrayer", d.prayer);
+    var ph=document.getElementById("ctPhone"); if(ph && d.phone && String(d.phone).trim()){ var pp=String(d.phone).trim(); ph.innerHTML="<a href='tel:"+pp.replace(/[^0-9+]/g,"")+"'>"+esc(pp)+"</a>"; }
+    var em=document.getElementById("ctEmail"); if(em && d.email && String(d.email).trim()){ var ee=String(d.email).trim(); em.innerHTML="<a href='mailto:"+esc(ee)+"'>"+esc(ee)+"</a>"; }
+  }).catch(function(){});
 })();
 </script>
 <div class="ev-lightbox" id="evLightbox"><button class="ev-lb-close" id="evLbClose" aria-label="Close">&times;</button><img id="evLbImg" src="" alt=""></div>
