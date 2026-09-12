@@ -555,11 +555,11 @@ if(form){
   var esc=function(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});};
   getDoc(doc(db,"settings","org")).then(function(snap){
     if(!snap.exists()) return; var d=snap.data()||{};
-    function setTxt(id,val){ var el=document.getElementById(id); if(el && val && String(val).trim()) el.textContent=String(val).trim(); }
-    setTxt("factSun", d.sundayTime);
-    setTxt("schSun", d.sundayTime);
-    setTxt("schMid", d.midweek);
-    setTxt("schPrayer", d.prayer);
+    function times(arr, single){ var a=(arr&&arr.length)?arr:(single?[single]:[]); return a.filter(function(x){return x&&String(x).trim();}).map(function(x){return String(x).trim();}); }
+    function setList(id,arr){ var el=document.getElementById(id); if(el && arr.length) el.innerHTML=arr.map(esc).join("<br>"); }
+    var sun=times(d.sundayTimes,d.sundayTime), mid=times(d.midweekTimes,d.midweek), pr=times(d.prayerTimes,d.prayer);
+    setList("schSun",sun); setList("schMid",mid); setList("schPrayer",pr);
+    var fs=document.getElementById("factSun"); if(fs && sun.length) fs.textContent=sun[0];
     var ph=document.getElementById("ctPhone"); if(ph && d.phone && String(d.phone).trim()){ var pp=String(d.phone).trim(); ph.innerHTML="<a href='tel:"+pp.replace(/[^0-9+]/g,"")+"'>"+esc(pp)+"</a>"; }
     var em=document.getElementById("ctEmail"); if(em && d.email && String(d.email).trim()){ var ee=String(d.email).trim(); em.innerHTML="<a href='mailto:"+esc(ee)+"'>"+esc(ee)+"</a>"; }
   }).catch(function(){});
