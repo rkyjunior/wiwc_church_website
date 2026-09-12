@@ -208,6 +208,12 @@ footer a:hover{color:#fbeccb}
 .ev-lightbox img{max-width:96vw;max-height:92vh;border-radius:4px;box-shadow:0 20px 60px rgba(0,0,0,.6);cursor:default}
 .ev-lb-close{position:absolute;top:16px;right:20px;width:48px;height:48px;border-radius:50%;border:2px solid var(--gold-lite);background:rgba(0,0,0,.25);color:#fbeccb;font-size:1.7rem;line-height:1;cursor:pointer}
 .ev-lb-close:hover{background:rgba(0,0,0,.5)}
+.gal-cat{font-family:"Fraunces",Georgia,serif;color:var(--maroon);font-size:1.5rem;margin:30px 0 12px}
+.gal-cat:first-child{margin-top:0}
+.gal-item{position:relative;cursor:zoom-in}
+.gal-item img,.gal-item video{width:100%;height:100%;object-fit:cover;display:block}
+.gal-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2.6rem;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.7);pointer-events:none}
+#galLbMedia img,#galLbMedia video{max-width:96vw;max-height:88vh;border-radius:4px;box-shadow:0 20px 60px rgba(0,0,0,.5);display:block}
 </style>
 </head>
 <body>
@@ -370,9 +376,8 @@ footer a:hover{color:#fbeccb}
 <section class="page" id="gallery" tabindex="-1">
   <section class="page-head"><div class="wrap"><h1>Gallery</h1><p>Moments from the life of our church.</p><div class="rule"></div></div></section>
   <div class="section"><div class="wrap">
-    <p class="lead">A glimpse of worship, teaching and fellowship at WIWC. <span class="pending">Awaiting photos</span></p>
-    <div class="gallery-grid" id="galleryGrid"></div>
-    <p style="color:var(--ink-soft);margin-top:22px;font-size:.95rem">Send your church photos and I&#39;ll place them here &mdash; the layout and full-screen viewer are already built.</p>
+    <p class="lead">Moments of worship, teaching and fellowship at WIWC. Tap any photo or video to enlarge.</p>
+    <div id="galleryWrap"></div>
   </div></div>
 </section>
 <section class="page" id="contact" tabindex="-1">
@@ -423,7 +428,7 @@ footer a:hover{color:#fbeccb}
 </section>
 </main>
 
-<div class="lb" id="lb"><button class="x" onclick="closeLb()" aria-label="Close">&times;</button><img id="lbImg" src="" alt=""></div>
+<div class="lb" id="galLb"><button class="x" id="galLbClose" aria-label="Close">&times;</button><div id="galLbMedia"></div></div>
 
 <footer>
   <div class="wrap">
@@ -468,20 +473,6 @@ footer a:hover{color:#fbeccb}
   window.addEventListener('hashchange',route);
   if(mb){mb.addEventListener('click',function(){var o=nl.classList.toggle('open');mb.setAttribute('aria-expanded',o);});}
   document.getElementById('yr').textContent=new Date().getFullYear();
-
-  // gallery (add {src:'images/xxx.jpg',cap:'...'} entries when photos arrive)
-  var GALLERY=[{cap:"Sunday worship"},{cap:"The Word taught"},{cap:"Prayer & fellowship"},{cap:"Baptism"},{cap:"Youth & children"},{cap:"Community outreach"}];
-  var grid=document.getElementById('galleryGrid');
-  if(grid){GALLERY.forEach(function(g){
-    var t=document.createElement('div'); t.className='tile'+(g.src?'':' ph');
-    if(g.src){var im=document.createElement('img');im.src=g.src;im.alt=g.cap||'';im.loading='lazy';im.addEventListener('click',function(){openLb(g.src,g.cap);});t.appendChild(im);}
-    var c=document.createElement('div');c.className='cap';c.textContent=g.cap||'';t.appendChild(c);grid.appendChild(t);
-  });}
-  var lb=document.getElementById('lb');
-  function openLb(src,cap){var i=document.getElementById('lbImg');i.src=src;i.alt=cap||'';lb.classList.add('open');}
-  window.closeLb=function(){lb.classList.remove('open');document.getElementById('lbImg').src='';};
-  if(lb){lb.addEventListener('click',function(e){if(e.target===lb)closeLb();});
-    document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLb();});}
 
   route();
 })();
@@ -563,6 +554,36 @@ if(form){
     var ph=document.getElementById("ctPhone"); if(ph && d.phone && String(d.phone).trim()){ var pp=String(d.phone).trim(); ph.innerHTML="<a href='tel:"+pp.replace(/[^0-9+]/g,"")+"'>"+esc(pp)+"</a>"; }
     var em=document.getElementById("ctEmail"); if(em && d.email && String(d.email).trim()){ var ee=String(d.email).trim(); em.innerHTML="<a href='mailto:"+esc(ee)+"'>"+esc(ee)+"</a>"; }
   }).catch(function(){});
+})();
+
+// ---- gallery from the management system ----
+(function(){
+  var wrap=document.getElementById("galleryWrap"); if(!wrap) return;
+  var esc=function(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});};
+  var CATS=["Worship","Baptism","Prayer & Fellowship","Youth & Children","Outreach","Events","Other"];
+  var lb=document.getElementById("galLb"), lbMedia=document.getElementById("galLbMedia");
+  function openLb(it){ if(!lb) return; lbMedia.innerHTML = it.type==="video" ? ("<video src='"+esc(it.url)+"' controls autoplay playsinline></video>") : ("<img src='"+esc(it.url)+"' alt='"+esc(it.caption||"")+"'>"); lb.classList.add("open"); }
+  function closeLb(){ if(!lb) return; lb.classList.remove("open"); lbMedia.innerHTML=""; }
+  if(lb){ lb.addEventListener("click",function(e){ if(e.target===lb) closeLb(); }); }
+  var lbc=document.getElementById("galLbClose"); if(lbc) lbc.addEventListener("click",closeLb);
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeLb(); });
+  getDocs(collection(db,"gallery")).then(function(snap){
+    var items=snap.docs.map(function(d){return d.data();}).sort(function(a,b){return ((b.createdAt&&b.createdAt.seconds)||0)-((a.createdAt&&a.createdAt.seconds)||0);});
+    if(!items.length){ wrap.innerHTML="<p class='lead'>Photos and videos from our services and events will appear here soon.</p>"; return; }
+    var byCat={}; items.forEach(function(it){ var c=it.category||"Other"; (byCat[c]=byCat[c]||[]).push(it); });
+    var order=CATS.filter(function(c){return byCat[c];}); Object.keys(byCat).forEach(function(c){ if(order.indexOf(c)<0) order.push(c); });
+    var flat=[], html="";
+    order.forEach(function(c){
+      html+="<h3 class='gal-cat'>"+esc(c)+"</h3><div class='gallery-grid'>"+byCat[c].map(function(it){ flat.push(it);
+        return it.type==="video"
+          ? ("<div class='tile gal-item' tabindex='0'><video src='"+esc(it.url)+"' preload='metadata' muted playsinline></video><span class='gal-play'>&#9658;</span>"+(it.caption?"<div class='cap'>"+esc(it.caption)+"</div>":"")+"</div>")
+          : ("<div class='tile gal-item' tabindex='0'><img src='"+esc(it.url)+"' alt='"+esc(it.caption||"")+"' loading='lazy'>"+(it.caption?"<div class='cap'>"+esc(it.caption)+"</div>":"")+"</div>");
+      }).join("")+"</div>";
+    });
+    wrap.innerHTML=html;
+    var tiles=wrap.querySelectorAll(".gal-item");
+    tiles.forEach(function(t,i){ t.addEventListener("click",function(){ openLb(flat[i]); }); t.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault(); openLb(flat[i]);} }); });
+  }).catch(function(){ wrap.innerHTML="<p class='lead'>We couldn&#39;t load the gallery right now. Please try again later.</p>"; });
 })();
 </script>
 <div class="ev-lightbox" id="evLightbox"><button class="ev-lb-close" id="evLbClose" aria-label="Close">&times;</button><img id="evLbImg" src="" alt=""></div>
