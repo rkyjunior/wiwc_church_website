@@ -191,9 +191,9 @@ footer a:hover{color:#fbeccb}
 }
 @media(max-width:520px){ .ways,.path,.gallery-grid{grid-template-columns:1fr} .section{padding:56px 0} }
 @media(prefers-reduced-motion:reduce){ .reveal,.page.active{animation:none;opacity:1;transform:none} html{scroll-behavior:auto} }
-.ev-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;margin-top:10px}
+.ev-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:24px;margin-top:10px}
 .ev-card{background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;box-shadow:0 10px 24px rgba(66,8,8,.06);display:flex;flex-direction:column}
-.ev-flyer{background:var(--paper-2);line-height:0}
+.ev-flyer{position:relative;cursor:zoom-in;background:var(--paper-2);line-height:0}
 .ev-flyer img{width:100%;height:auto;display:block}
 .ev-body{padding:18px 20px}
 .ev-body h3{font-family:"Fraunces",Georgia,serif;color:var(--maroon);font-size:1.3rem;margin:0 0 6px}
@@ -202,6 +202,12 @@ footer a:hover{color:#fbeccb}
 .ev-fbtn-wrap{padding:18px 20px 0}
 .ev-fbtn{display:inline-block;background:var(--maroon);color:#fdf4e3;text-decoration:none;font-weight:700;font-size:.9rem;padding:9px 16px;border-radius:4px}
 .ev-fbtn:hover{background:var(--maroon-deep)}
+.ev-zoom-hint{position:absolute;bottom:10px;right:10px;background:rgba(66,8,8,.85);color:#fdf4e3;font-size:.74rem;font-weight:700;padding:5px 11px;border-radius:20px;pointer-events:none}
+.ev-lightbox{position:fixed;inset:0;background:rgba(20,4,4,.93);display:none;align-items:center;justify-content:center;z-index:200;padding:24px;cursor:zoom-out}
+.ev-lightbox.open{display:flex}
+.ev-lightbox img{max-width:96vw;max-height:92vh;border-radius:4px;box-shadow:0 20px 60px rgba(0,0,0,.6);cursor:default}
+.ev-lb-close{position:absolute;top:16px;right:20px;width:48px;height:48px;border-radius:50%;border:2px solid var(--gold-lite);background:rgba(0,0,0,.25);color:#fbeccb;font-size:1.7rem;line-height:1;cursor:pointer}
+.ev-lb-close:hover{background:rgba(0,0,0,.5)}
 </style>
 </head>
 <body>
@@ -521,6 +527,14 @@ if(form){
   var host=document.getElementById("eventsList"); if(!host) return;
   var esc=function(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});};
   function fmtDate(d){ try{ return new Date(d+"T00:00:00").toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"long",year:"numeric"}); }catch(e){ return d; } }
+  var lb=document.getElementById("evLightbox"), lbImg=document.getElementById("evLbImg");
+  function openLb(src,alt){ if(!lb) return; lbImg.src=src; lbImg.alt=alt||""; lb.classList.add("open"); }
+  function closeLb(){ if(!lb) return; lb.classList.remove("open"); lbImg.src=""; }
+  host.addEventListener("click",function(e){ var fl=e.target.closest&&e.target.closest(".ev-flyer"); if(fl){ var im=fl.querySelector("img"); if(im) openLb(im.src, im.alt); } });
+  host.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){ var fl=e.target.closest&&e.target.closest(".ev-flyer"); if(fl){ e.preventDefault(); var im=fl.querySelector("img"); if(im) openLb(im.src, im.alt); } } });
+  if(lb){ lb.addEventListener("click",function(e){ if(e.target!==lbImg) closeLb(); }); }
+  var lbc=document.getElementById("evLbClose"); if(lbc) lbc.addEventListener("click",closeLb);
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeLb(); });
   getDocs(query(collection(db,"events"), where("published","==",true))).then(function(snap){
     var today=new Date().toISOString().slice(0,10);
     var list=snap.docs.map(function(d){return d.data();}).filter(function(e){return (e.date||"")>=today;}).sort(function(a,b){return (a.date||"").localeCompare(b.date||"");});
@@ -528,7 +542,7 @@ if(form){
     host.innerHTML=list.map(function(e){
       var isImg = /\.(jpe?g|png|gif|webp|bmp|svg)(\?|$)/i.test(e.flyerUrl||"");
       var flyer = "";
-      if(e.flyerUrl){ flyer = isImg ? ("<div class='ev-flyer'><img src='"+esc(e.flyerUrl)+"' alt='"+esc(e.title||"Event flyer")+"' loading='lazy'></div>") : ("<div class='ev-fbtn-wrap'><a class='ev-fbtn' href='"+esc(e.flyerUrl)+"' target='_blank' rel='noopener'>View event flyer</a></div>"); }
+      if(e.flyerUrl){ flyer = isImg ? ("<div class='ev-flyer' role='button' tabindex='0' aria-label='Enlarge flyer'><img src='"+esc(e.flyerUrl)+"' alt='"+esc(e.title||"Event flyer")+"' loading='lazy'><span class='ev-zoom-hint'>Tap to enlarge</span></div>") : ("<div class='ev-fbtn-wrap'><a class='ev-fbtn' href='"+esc(e.flyerUrl)+"' target='_blank' rel='noopener'>View event flyer</a></div>"); }
       var meta = esc(fmtDate(e.date))+(e.time?" &middot; "+esc(e.time):"")+(e.location?" &middot; "+esc(e.location):"");
       var desc = e.description ? "<p class='ev-desc'>"+esc(e.description)+"</p>" : "";
       return "<article class='ev-card'>"+flyer+"<div class='ev-body'><h3>"+esc(e.title||"Event")+"</h3><p class='ev-meta'>"+meta+"</p>"+desc+"</div></article>";
@@ -536,5 +550,6 @@ if(form){
   }).catch(function(){ host.innerHTML="<p class='lead'>We couldn&#39;t load events right now. Please try again later.</p>"; });
 })();
 </script>
+<div class="ev-lightbox" id="evLightbox"><button class="ev-lb-close" id="evLbClose" aria-label="Close">&times;</button><img id="evLbImg" src="" alt=""></div>
 </body>
 </html>
