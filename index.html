@@ -133,6 +133,8 @@ nav.links a.btn-out{color:var(--maroon)}
 .give-card p{color:#eeddc0;font-size:.98rem}
 .give-card .chan{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 22px}
 .give-card .chan span{font-size:.85rem;font-weight:600;background:rgba(0,0,0,.22);border:1px solid rgba(226,198,107,.3);border-radius:2px;padding:5px 10px;color:#f0dcb6}
+.give-card .gl{display:block;color:#f0dcb6;font-weight:600;font-size:.85rem;margin:12px 0 5px}
+.give-card .gi{width:100%;padding:11px 12px;border:1px solid var(--gold-deep);border-radius:4px;font:inherit;background:#fff;color:var(--ink)}
 .give-note{font-size:.85rem;color:var(--gold-lite);margin-top:14px}
 
 .gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px}
@@ -418,11 +420,20 @@ footer a:hover{color:#fbeccb}
       <p style="color:var(--ink-soft)">We do not sell anointing oil, water or other items. Every gift is a freewill offering, given cheerfully. On Sundays there are two collections &mdash; one before the message and one after.</p>
     </div>
     <div class="give-card">
-      <h3>Give by Mobile Money</h3>
-      <p>Secure online giving via MoMo is being set up. When it goes live you&#39;ll be able to give in a few taps from these networks:</p>
-      <div class="chan"><span>MTN MoMo</span><span>Telecel Cash</span><span>AirtelTigo Money</span></div>
-      <a class="btn" style="background:var(--gold);color:#3a1206;opacity:.6;pointer-events:none" href="#give">Give now &mdash; coming soon</a>
-      <p class="give-note">Online giving will be powered by Paystack MoMo. In the meantime, you can give in person during either of the two Sunday collections.</p>
+      <h3>Give online</h3>
+      <p>Give securely with MTN MoMo, Telecel Cash, AirtelTigo Money or a card.</p>
+      <form id="giveForm2">
+        <label class="gl" for="gv_amount">Amount (&#8373;)</label>
+        <input id="gv_amount" class="gi" type="number" min="1" step="0.01" placeholder="0.00">
+        <label class="gl" for="gv_cat">What is this for?</label>
+        <select id="gv_cat" class="gi"><option>Tithe</option><option>Offering</option><option>Thanksgiving</option><option>Seed/Special</option><option>Other</option></select>
+        <label class="gl" for="gv_name">Your name (optional)</label>
+        <input id="gv_name" class="gi" placeholder="Leave blank to give anonymously">
+        <label class="gl" for="gv_email">Email (optional &mdash; for a receipt)</label>
+        <input id="gv_email" class="gi" type="email" placeholder="you@example.com">
+        <button class="btn" id="gv_btn" type="submit" style="background:var(--gold);color:#3a1206;width:100%;margin-top:14px">Give now</button>
+        <p class="give-note" id="gv_msg"></p>
+      </form>
     </div>
   </div></div>
 </section>
@@ -481,6 +492,7 @@ function handleVisit(e){e.preventDefault();var n=document.getElementById('formno
   n.style.borderLeftColor="var(--green)";return false;}
 </script>
 
+<script src="https://js.paystack.co/v2/inline.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, where, getDoc, doc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
@@ -584,6 +596,45 @@ if(form){
     var tiles=wrap.querySelectorAll(".gal-item");
     tiles.forEach(function(t,i){ t.addEventListener("click",function(){ openLb(flat[i]); }); t.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault(); openLb(flat[i]);} }); });
   }).catch(function(){ wrap.innerHTML="<p class='lead'>We couldn&#39;t load the gallery right now. Please try again later.</p>"; });
+})();
+
+// ---- online giving (Paystack) ----
+(function(){
+  var PAYSTACK_PUBLIC_KEY="pk_REPLACE_ME";
+  var FALLBACK_EMAIL="giving@wiwc.org";
+  var form=document.getElementById("giveForm2"); if(!form) return;
+  var msg=document.getElementById("gv_msg"), btn=document.getElementById("gv_btn");
+  function setMsg(t,c){ if(msg){ msg.textContent=t; msg.style.color=c||"#e2c66b"; } }
+  form.addEventListener("submit",function(e){
+    e.preventDefault();
+    var amount=parseFloat(document.getElementById("gv_amount").value)||0;
+    if(!(amount>0)){ setMsg("Please enter an amount.","#ffd7d7"); return; }
+    if(typeof window.PaystackPop==="undefined"){ setMsg("Payment library didn't load. Please refresh and try again.","#ffd7d7"); return; }
+    if(PAYSTACK_PUBLIC_KEY.indexOf("REPLACE")>-1){ setMsg("Online giving isn't fully set up yet \u2014 please give in person for now.","#ffd7d7"); return; }
+    var name=(document.getElementById("gv_name").value||"").trim();
+    var email=(document.getElementById("gv_email").value||"").trim()||FALLBACK_EMAIL;
+    var cat=document.getElementById("gv_cat").value;
+    btn.disabled=true; setMsg("Opening secure checkout\u2026","#e2c66b");
+    try{
+      var paystack=new window.PaystackPop();
+      paystack.newTransaction({
+        key: PAYSTACK_PUBLIC_KEY,
+        email: email,
+        amount: Math.round(amount*100),
+        currency: "GHS",
+        metadata: { category: cat, giver_name: name, source: "website" },
+        onSuccess: function(tr){
+          setMsg("Verifying your gift\u2026","#e2c66b");
+          fetch("/api/paystack-verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({reference:tr.reference})})
+            .then(function(r){return r.json();})
+            .then(function(j){ if(j&&j.ok){ setMsg("Thank you for your gift of \u20b5"+(j.amount||amount)+"! God bless you.","#bfe3c2"); form.reset(); } else { setMsg("Payment received. If it doesn't appear, quote reference "+tr.reference+" to the church.","#f0dcb6"); } })
+            .catch(function(){ setMsg("Payment received (ref "+tr.reference+"). Thank you!","#f0dcb6"); })
+            .finally(function(){ btn.disabled=false; });
+        },
+        onCancel: function(){ setMsg("Payment cancelled.","#f0dcb6"); btn.disabled=false; }
+      });
+    }catch(err){ setMsg("Could not start payment. Please try again.","#ffd7d7"); btn.disabled=false; }
+  });
 })();
 </script>
 <div class="ev-lightbox" id="evLightbox"><button class="ev-lb-close" id="evLbClose" aria-label="Close">&times;</button><img id="evLbImg" src="" alt=""></div>
