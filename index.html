@@ -199,6 +199,9 @@ footer a:hover{color:#fbeccb}
 .ev-body h3{font-family:"Fraunces",Georgia,serif;color:var(--maroon);font-size:1.3rem;margin:0 0 6px}
 .ev-meta{color:var(--gold-deep);font-weight:600;font-size:.9rem;margin:0 0 8px}
 .ev-desc{color:var(--ink-soft);margin:0;white-space:pre-line}
+.ev-fbtn-wrap{padding:18px 20px 0}
+.ev-fbtn{display:inline-block;background:var(--maroon);color:#fdf4e3;text-decoration:none;font-weight:700;font-size:.9rem;padding:9px 16px;border-radius:4px}
+.ev-fbtn:hover{background:var(--maroon-deep)}
 </style>
 </head>
 <body>
@@ -523,7 +526,9 @@ if(form){
     var list=snap.docs.map(function(d){return d.data();}).filter(function(e){return (e.date||"")>=today;}).sort(function(a,b){return (a.date||"").localeCompare(b.date||"");});
     if(!list.length){ host.innerHTML="<p class='lead'>No upcoming events right now &mdash; please check back soon, or come and worship with us any Sunday.</p>"; return; }
     host.innerHTML=list.map(function(e){
-      var flyer = e.flyerUrl ? ("<div class='ev-flyer'><img src='"+esc(e.flyerUrl)+"' alt='"+esc(e.title||"Event flyer")+"' loading='lazy'></div>") : "";
+      var isImg = /\.(jpe?g|png|gif|webp|bmp|svg)(\?|$)/i.test(e.flyerUrl||"");
+      var flyer = "";
+      if(e.flyerUrl){ flyer = isImg ? ("<div class='ev-flyer'><img src='"+esc(e.flyerUrl)+"' alt='"+esc(e.title||"Event flyer")+"' loading='lazy'></div>") : ("<div class='ev-fbtn-wrap'><a class='ev-fbtn' href='"+esc(e.flyerUrl)+"' target='_blank' rel='noopener'>View event flyer</a></div>"); }
       var meta = esc(fmtDate(e.date))+(e.time?" &middot; "+esc(e.time):"")+(e.location?" &middot; "+esc(e.location):"");
       var desc = e.description ? "<p class='ev-desc'>"+esc(e.description)+"</p>" : "";
       return "<article class='ev-card'>"+flyer+"<div class='ev-body'><h3>"+esc(e.title||"Event")+"</h3><p class='ev-meta'>"+meta+"</p>"+desc+"</div></article>";
