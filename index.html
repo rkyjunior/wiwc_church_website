@@ -191,6 +191,14 @@ footer a:hover{color:#fbeccb}
 }
 @media(max-width:520px){ .ways,.path,.gallery-grid{grid-template-columns:1fr} .section{padding:56px 0} }
 @media(prefers-reduced-motion:reduce){ .reveal,.page.active{animation:none;opacity:1;transform:none} html{scroll-behavior:auto} }
+.ev-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;margin-top:10px}
+.ev-card{background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden;box-shadow:0 10px 24px rgba(66,8,8,.06);display:flex;flex-direction:column}
+.ev-flyer{background:var(--paper-2);line-height:0}
+.ev-flyer img{width:100%;height:auto;display:block}
+.ev-body{padding:18px 20px}
+.ev-body h3{font-family:"Fraunces",Georgia,serif;color:var(--maroon);font-size:1.3rem;margin:0 0 6px}
+.ev-meta{color:var(--gold-deep);font-weight:600;font-size:.9rem;margin:0 0 8px}
+.ev-desc{color:var(--ink-soft);margin:0;white-space:pre-line}
 </style>
 </head>
 <body>
@@ -344,9 +352,10 @@ footer a:hover{color:#fbeccb}
   <section class="page-head"><div class="wrap"><h1>Events</h1><p>Special services, conventions and programmes.</p><div class="rule"></div></div></section>
   <div class="section"><div class="wrap">
     <p class="eyebrow">Upcoming</p>
-    <h2>What&#39;s on at WIWC <span class="pending">Coming soon</span></h2>
+    <h2>What&#39;s on at WIWC</h2>
     <div class="rule"></div>
-    <p class="lead">Special services, conventions and programmes will be listed here. Once the church management system is live, events you set up internally will appear on this page automatically &mdash; no double entry.</p>
+    <p class="lead">Join us for these upcoming services and programmes.</p>
+    <div id="eventsList" class="ev-list"><p class="lead" id="eventsEmpty">Loading events&hellip;</p></div>
   </div></div>
 </section>
 <section class="page" id="gallery" tabindex="-1">
@@ -474,7 +483,7 @@ function handleVisit(e){e.preventDefault();var n=document.getElementById('formno
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 const firebaseConfig = {
   apiKey: "AIzaSyDTLRoX8ll9nUVfHnD35YYg_HoaNu_zOoI",
   authDomain: "wiwc-church.firebaseapp.com",
@@ -503,6 +512,24 @@ if(form){
       .finally(function(){ if(btn) btn.disabled=false; });
   });
 }
+
+// ---- published events from the management system ----
+(function(){
+  var host=document.getElementById("eventsList"); if(!host) return;
+  var esc=function(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});};
+  function fmtDate(d){ try{ return new Date(d+"T00:00:00").toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"long",year:"numeric"}); }catch(e){ return d; } }
+  getDocs(query(collection(db,"events"), where("published","==",true))).then(function(snap){
+    var today=new Date().toISOString().slice(0,10);
+    var list=snap.docs.map(function(d){return d.data();}).filter(function(e){return (e.date||"")>=today;}).sort(function(a,b){return (a.date||"").localeCompare(b.date||"");});
+    if(!list.length){ host.innerHTML="<p class='lead'>No upcoming events right now &mdash; please check back soon, or come and worship with us any Sunday.</p>"; return; }
+    host.innerHTML=list.map(function(e){
+      var flyer = e.flyerUrl ? ("<div class='ev-flyer'><img src='"+esc(e.flyerUrl)+"' alt='"+esc(e.title||"Event flyer")+"' loading='lazy'></div>") : "";
+      var meta = esc(fmtDate(e.date))+(e.time?" &middot; "+esc(e.time):"")+(e.location?" &middot; "+esc(e.location):"");
+      var desc = e.description ? "<p class='ev-desc'>"+esc(e.description)+"</p>" : "";
+      return "<article class='ev-card'>"+flyer+"<div class='ev-body'><h3>"+esc(e.title||"Event")+"</h3><p class='ev-meta'>"+meta+"</p>"+desc+"</div></article>";
+    }).join("");
+  }).catch(function(){ host.innerHTML="<p class='lead'>We couldn&#39;t load events right now. Please try again later.</p>"; });
+})();
 </script>
 </body>
 </html>
